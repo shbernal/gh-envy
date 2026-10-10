@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="951" height="513" viewBox="0 0 951 513" role="img" aria-label="gh envy demo: create">
+<style>
+text{font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,'Liberation Mono',monospace;font-size:14px;white-space:pre;fill:#c0caf5}
+.b{font-weight:700}
+@keyframes t0{0%,1.790%{clip-path:inset(0 100% 0 0)}1.790%{clip-path:inset(0 100% 0 0);animation-timing-function:steps(76,end)}11.991%,100%{clip-path:inset(0 0 0 0)}}
+.c0{animation:t0 33.53s infinite}
+@keyframes a0{0%,1.790%{opacity:0}1.820%,100%{opacity:1}}
+.l0{animation:a0 33.53s infinite}
+@keyframes t1{0%,12.438%{clip-path:inset(0 100% 0 0)}12.438%{clip-path:inset(0 100% 0 0);animation-timing-function:steps(64,end)}21.029%,100%{clip-path:inset(0 0 0 0)}}
+.c1{animation:t1 33.53s infinite}
+@keyframes a1{0%,12.438%{opacity:0}12.468%,100%{opacity:1}}
+.l1{animation:a1 33.53s infinite}
+@keyframes a2{0%,22.521%{opacity:0}22.550%,100%{opacity:1}}
+.l2{animation:a2 33.53s infinite}
+@keyframes a3{0%,27.293%{opacity:0}27.323%,100%{opacity:1}}
+.l3{animation:a3 33.53s infinite}
+@keyframes t4{0%,27.293%{clip-path:inset(0 100% 0 0)}27.293%{clip-path:inset(0 100% 0 0);animation-timing-function:steps(74,end)}37.226%,100%{clip-path:inset(0 0 0 0)}}
+.c4{animation:t4 33.53s infinite}
+@keyframes a4{0%,27.293%{opacity:0}27.323%,100%{opacity:1}}
+.l4{animation:a4 33.53s infinite}
+@keyframes a5{0%,38.717%{opacity:0}38.747%,100%{opacity:1}}
+.l5{animation:a5 33.53s infinite}
+@keyframes a6{0%,43.490%{opacity:0}43.520%,100%{opacity:1}}
+.l6{animation:a6 33.53s infinite}
+@keyframes t7{0%,43.490%{clip-path:inset(0 100% 0 0)}43.490%{clip-path:inset(0 100% 0 0);animation-timing-function:steps(68,end)}52.617%,100%{clip-path:inset(0 0 0 0)}}
+.c7{animation:t7 33.53s infinite}
+@keyframes a7{0%,43.490%{opacity:0}43.520%,100%{opacity:1}}
+.l7{animation:a7 33.53s infinite}
+@keyframes t8{0%,53.065%{clip-path:inset(0 100% 0 0)}53.065%{clip-path:inset(0 100% 0 0);animation-timing-function:steps(103,end)}66.890%,100%{clip-path:inset(0 0 0 0)}}
+.c8{animation:t8 33.53s infinite}
+@keyframes a8{0%,53.065%{opacity:0}53.095%,100%{opacity:1}}
+.l8{animation:a8 33.53s infinite}
+@keyframes a9{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l9{animation:a9 33.53s infinite}
+@keyframes a10{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l10{animation:a10 33.53s infinite}
+@keyframes a11{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l11{animation:a11 33.53s infinite}
+@keyframes a12{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l12{animation:a12 33.53s infinite}
+@keyframes a13{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l13{animation:a13 33.53s infinite}
+@keyframes a14{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l14{animation:a14 33.53s infinite}
+@keyframes a15{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l15{animation:a15 33.53s infinite}
+@keyframes a16{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l16{animation:a16 33.53s infinite}
+@keyframes a17{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l17{animation:a17 33.53s infinite}
+@keyframes a18{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l18{animation:a18 33.53s infinite}
+@keyframes a19{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l19{animation:a19 33.53s infinite}
+@keyframes a20{0%,68.382%{opacity:0}68.412%,100%{opacity:1}}
+.l20{animation:a20 33.53s infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<rect x="0.5" y="0.5" width="950" height="512" rx="10" fill="#1a1b26" stroke="#2a2e42"/>
+<path d="M0.5 10.5a10 10 0 0 1 10-10h930a10 10 0 0 1 10 10v20h-950z" fill="#16161e"/>
+<circle cx="22" cy="16" r="5.5" fill="#f7768e"/><circle cx="40" cy="16" r="5.5" fill="#e0af68"/><circle cx="58" cy="16" r="5.5" fill="#9ece6a"/>
+<text x="476" y="20.5" text-anchor="middle" style="font-size:12px;fill:#565f89">acme/shop</text>
+<g class="l0"><text x="22.0" y="64.0"><tspan fill="#9ece6a" class="b">$ </tspan></text><text class="c0" x="38.8" y="64.0"><tspan>gh envy create canary --reviewer octocat -r acme/sre --prevent-self-review \</tspan></text></g>
+<g class="l1"><text x="22.0" y="85.0"><tspan fill="#9ece6a" class="b">  </tspan></text><text class="c1" x="38.8" y="85.0"><tspan>  --wait-timer 15m --branch main --tag &#39;v*&#39; --admin-bypass=false</tspan></text></g>
+<text class="l2" x="22.0" y="106.0"><tspan fill="#9ece6a">✓</tspan><tspan> Created environment </tspan><tspan class="b">canary</tspan><tspan> in acme/shop</tspan></text>
+<text class="l3" x="22.0" y="127.0"></text>
+<g class="l4"><text x="22.0" y="148.0"><tspan fill="#9ece6a" class="b">$ </tspan></text><text class="c4" x="38.8" y="148.0"><tspan>gh envy edit canary --add-reviewer hubot --wait-timer 1h --remove-tag &#39;v*&#39;</tspan></text></g>
+<text class="l5" x="22.0" y="169.0"><tspan fill="#9ece6a">✓</tspan><tspan> Updated environment </tspan><tspan class="b">canary</tspan><tspan> in acme/shop</tspan></text>
+<text class="l6" x="22.0" y="190.0"></text>
+<g class="l7"><text x="22.0" y="211.0"><tspan fill="#9ece6a" class="b">$ </tspan></text><text class="c7" x="38.8" y="211.0"><tspan>gh envy view canary --json name,reviewers,waitTimer,branchPolicies \</tspan></text></g>
+<g class="l8"><text x="22.0" y="232.0"><tspan fill="#9ece6a" class="b">  </tspan></text><text class="c8" x="38.8" y="232.0"><tspan>  --jq &#39;{env: .name, reviewers: [.reviewers[].name], wait: .waitTimer, refs: [.branchPolicies[].name]}&#39;</tspan></text></g>
+<text class="l9" x="22.0" y="253.0"><tspan class="b">{</tspan></text>
+<text class="l10" x="22.0" y="274.0"><tspan>  </tspan><tspan fill="#7aa2f7" class="b">&#34;env&#34;</tspan><tspan class="b">:</tspan><tspan> </tspan><tspan fill="#9ece6a">&#34;canary&#34;</tspan><tspan class="b">,</tspan></text>
+<text class="l11" x="22.0" y="295.0"><tspan>  </tspan><tspan fill="#7aa2f7" class="b">&#34;refs&#34;</tspan><tspan class="b">:</tspan><tspan> </tspan><tspan class="b">[</tspan></text>
+<text class="l12" x="22.0" y="316.0"><tspan>    </tspan><tspan fill="#9ece6a">&#34;main&#34;</tspan></text>
+<text class="l13" x="22.0" y="337.0"><tspan>  </tspan><tspan class="b">]</tspan><tspan class="b">,</tspan></text>
+<text class="l14" x="22.0" y="358.0"><tspan>  </tspan><tspan fill="#7aa2f7" class="b">&#34;reviewers&#34;</tspan><tspan class="b">:</tspan><tspan> </tspan><tspan class="b">[</tspan></text>
+<text class="l15" x="22.0" y="379.0"><tspan>    </tspan><tspan fill="#9ece6a">&#34;octocat&#34;</tspan><tspan class="b">,</tspan></text>
+<text class="l16" x="22.0" y="400.0"><tspan>    </tspan><tspan fill="#9ece6a">&#34;acme/sre&#34;</tspan><tspan class="b">,</tspan></text>
+<text class="l17" x="22.0" y="421.0"><tspan>    </tspan><tspan fill="#9ece6a">&#34;hubot&#34;</tspan></text>
+<text class="l18" x="22.0" y="442.0"><tspan>  </tspan><tspan class="b">]</tspan><tspan class="b">,</tspan></text>
+<text class="l19" x="22.0" y="463.0"><tspan>  </tspan><tspan fill="#7aa2f7" class="b">&#34;wait&#34;</tspan><tspan class="b">:</tspan><tspan> 60</tspan></text>
+<text class="l20" x="22.0" y="484.0"><tspan class="b">}</tspan></text>
+</svg>
