@@ -7,6 +7,9 @@
   - `go test ./...`
   - `golangci-lint run`
 
+- Key documentation
+  - [docs/commands.md](docs/commands.md)
+
 - Conventions
   - UX mirrors core `gh` (flags, `-R`, exporters, prompts, exit codes). When in doubt, copy how `gh variable` / `gh secret` behave.
   - Built on `github.com/cli/go-gh/v2` and cobra, the same stack as `gh`.
