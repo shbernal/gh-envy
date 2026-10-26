@@ -39,9 +39,12 @@ gh envy create <environment> [flags]
 | `--protected-branches` | Only branches with branch protection can deploy. |
 | `-b, --branch` | Branch name pattern allowed to deploy. Repeatable. |
 | `--tag` | Tag name pattern allowed to deploy. Repeatable. |
+| `--secret` | Secret to set once the environment exists: `NAME=VALUE`, or a bare `NAME` to be asked for the value. Repeatable. |
 | `--force` | Update the environment if it exists instead of failing. |
 
 `--protected-branches` and the pattern flags are mutually exclusive. Without either, every branch and tag can deploy.
+
+A bare `--secret NAME` asks for the value in a terminal with masked input. When piped, a single bare `NAME` reads its value from standard input, without a trailing newline, as `gh secret set` does. `gh secret set --env` fails on an environment that doesn't exist yet, so `create --secret` does both in one step.
 
 ## edit
 

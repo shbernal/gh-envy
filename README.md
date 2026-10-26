@@ -102,7 +102,7 @@ The command is `gh envy`. Its name stays clear of `gh env`, so it keeps working 
 | --- | --- |
 | `gh envy list` | Environments and a summary of their protection |
 | `gh envy view <env>` | One environment in full; `--web` opens its settings |
-| `gh envy create <env>` | New environment, with `--reviewer`, `--wait-timer`, `--branch`, `--tag`, `--protected-branches`, `--prevent-self-review`, `--admin-bypass` |
+| `gh envy create <env>` | New environment, with `--reviewer`, `--wait-timer`, `--branch`, `--tag`, `--protected-branches`, `--prevent-self-review`, `--admin-bypass`, `--secret` |
 | `gh envy edit <env>` | Change only what you name; `--add-*` and `--remove-*` change sets in place |
 | `gh envy clone <src> <dst>` | Copy rules, patterns, apps and variables; prints the secrets left to set |
 | `gh envy delete <env>...` | Delete, after typing the name or with `--yes` |

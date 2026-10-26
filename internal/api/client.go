@@ -3,6 +3,8 @@ package api
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +14,7 @@ import (
 
 	ghapi "github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/repository"
+	"golang.org/x/crypto/nacl/box"
 )
 
 // ErrNotFound reports a missing environment.
@@ -241,6 +244,27 @@ func (c *Client) SetVariable(env, name, value string, update bool) error {
 // ListSecrets returns the environment's secret names.
 func (c *Client) ListSecrets(env string) ([]Secret, error) {
 	return paginate[Secret](c, c.envPath(env, "/secrets"), 0, "secrets")
+}
+
+// SetSecret creates or updates a secret, sealed with the environment's public key.
+func (c *Client) SetSecret(env, name, value string) error {
+	var pk struct {
+		KeyID string `json:"key_id"`
+		Key   string `json:"key"`
+	}
+	if err := c.do(http.MethodGet, c.envPath(env, "/secrets/public-key"), nil, &pk); err != nil {
+		return err
+	}
+	raw, err := base64.StdEncoding.DecodeString(pk.Key)
+	if err != nil || len(raw) != 32 {
+		return fmt.Errorf("invalid public key for environment %q", env)
+	}
+	sealed, err := box.SealAnonymous(nil, []byte(value), (*[32]byte)(raw), rand.Reader)
+	if err != nil {
+		return err
+	}
+	body := map[string]string{"encrypted_value": base64.StdEncoding.EncodeToString(sealed), "key_id": pk.KeyID}
+	return c.do(http.MethodPut, c.envPath(env, "/secrets/"+url.PathEscape(name)), body, nil)
 }
 
 // ResolveReviewer turns "login" or "org/team-slug" into a reviewer reference.

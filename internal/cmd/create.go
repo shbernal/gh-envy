@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strconv"
 	"strings"
@@ -257,17 +258,24 @@ func apply(c *api.Client, env string, pl plan, current *api.Protection) error {
 func newCreateCmd(f *cmdutil.Factory) *cobra.Command {
 	var flags protectionFlags
 	var force bool
+	var secrets []string
 	cmd := &cobra.Command{
 		Use:   "create <environment>",
 		Short: "Create an environment",
 		Long: `Create a deployment environment, optionally with protection rules.
 
 Reviewers are user logins or ORG/TEAM slugs. Branch and tag patterns use
-fnmatch syntax, as on the settings page (release/*, v*).`,
+fnmatch syntax, as on the settings page (release/*, v*).
+
+--secret NAME=VALUE sets a secret once the environment exists. A bare NAME
+asks for the value in a terminal; otherwise a single bare NAME reads it from
+standard input.`,
 		Example: `  $ gh envy create staging
   $ gh envy create production --reviewer octocat --reviewer my-org/ops --prevent-self-review
   $ gh envy create production --wait-timer 30m --branch main --tag 'v*'
-  $ gh envy create preview --protected-branches --admin-bypass=false`,
+  $ gh envy create preview --protected-branches --admin-bypass=false
+  $ gh envy create staging --secret DATABASE_URL --secret API_KEY="$API_KEY"
+  $ gh envy create staging --secret DATABASE_URL < db-url.txt`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := f.Client()
@@ -288,18 +296,71 @@ fnmatch syntax, as on the settings page (release/*, v*).`,
 			if err != nil {
 				return err
 			}
+			values, err := secretValues(f, secrets)
+			if err != nil {
+				return err
+			}
 			if err := apply(c, name, pl, nil); err != nil {
 				return err
 			}
 			if f.IO.StdoutTTY {
 				fmt.Fprintf(f.IO.Out, "%s Created environment %s in %s\n", f.IO.SuccessIcon(), f.IO.Bold(name), c.FullName())
 			}
+			for _, s := range values {
+				if err := c.SetSecret(name, s.name, s.value); err != nil {
+					return fmt.Errorf("setting secret %s: %w", s.name, err)
+				}
+				if f.IO.StdoutTTY {
+					fmt.Fprintf(f.IO.Out, "%s Set secret %s\n", f.IO.SuccessIcon(), f.IO.Bold(s.name))
+				}
+			}
 			return nil
 		},
 	}
 	flags.register(cmd.Flags(), false)
 	cmd.Flags().BoolVar(&force, "force", false, "Update the environment if it already exists")
+	cmd.Flags().StringArrayVar(&secrets, "secret", nil, "Set a secret: `NAME` or NAME=VALUE, repeatable")
 	return cmd
+}
+
+type secret struct{ name, value string }
+
+// secretValues resolves --secret flags, prompting or reading stdin for bare names.
+func secretValues(f *cmdutil.Factory, flags []string) ([]secret, error) {
+	out := make([]secret, len(flags))
+	var bare []int
+	for i, s := range flags {
+		name, value, ok := strings.Cut(s, "=")
+		if name == "" {
+			return nil, cmdutil.FlagError{Err: fmt.Errorf("invalid `--secret` %q: expected NAME or NAME=VALUE", s)}
+		}
+		out[i] = secret{name, value}
+		if !ok {
+			bare = append(bare, i)
+		}
+	}
+	if len(bare) == 0 {
+		return out, nil
+	}
+	if f.IO.CanPrompt() {
+		for _, i := range bare {
+			v, err := f.Prompter.Password("Value for secret " + out[i].name)
+			if err != nil {
+				return nil, cmdutil.ErrCancel
+			}
+			out[i].value = v
+		}
+		return out, nil
+	}
+	if len(bare) > 1 || f.IO.StdinTTY {
+		return nil, cmdutil.FlagError{Err: errors.New("pass values as `--secret NAME=VALUE`, or pipe one value to a single bare `--secret NAME`, when not running interactively")}
+	}
+	raw, err := io.ReadAll(f.IO.In)
+	if err != nil {
+		return nil, err
+	}
+	out[bare[0]].value = strings.TrimRight(string(raw), "\r\n")
+	return out, nil
 }
 
 func newEditCmd(f *cmdutil.Factory) *cobra.Command {

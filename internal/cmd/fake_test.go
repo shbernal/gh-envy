@@ -115,6 +115,10 @@ func (p *stubPrompter) Input(prompt, _ string) (string, error) {
 	return p.next(prompt).(string), nil
 }
 
+func (p *stubPrompter) Password(prompt string) (string, error) {
+	return p.next(prompt).(string), nil
+}
+
 func (p *stubPrompter) Confirm(prompt string, _ bool) (bool, error) {
 	return p.next(prompt).(bool), nil
 }

@@ -17,6 +17,7 @@ import (
 type Prompter interface {
 	Select(prompt, defaultValue string, options []string) (int, error)
 	Input(prompt, defaultValue string) (string, error)
+	Password(prompt string) (string, error)
 	Confirm(prompt string, defaultValue bool) (bool, error)
 }
 

@@ -138,6 +138,14 @@ func (p *surveyPrompter) Input(prompt, _ string) (string, error) {
 	return a, nil
 }
 
+// Password masks the answer like survey does.
+func (p *surveyPrompter) Password(prompt string) (string, error) {
+	a := p.answers[0]
+	p.answers = p.answers[1:]
+	fmt.Fprintf(p.out, "\x1b[32m?\x1b[0m \x1b[1m%s\x1b[0m %s\n", prompt, strings.Repeat("*", len(a)))
+	return a, nil
+}
+
 func (p *surveyPrompter) Select(string, string, []string) (int, error) { return 0, nil }
 func (p *surveyPrompter) Confirm(string, bool) (bool, error)           { return true, nil }
 
