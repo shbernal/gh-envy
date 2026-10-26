@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -192,4 +193,38 @@ func (g *fakeGH) users() {
 	g.json("GET /users/octocat", 200, `{"id":10,"login":"octocat"}`)
 	g.json("GET /users/hubot", 200, `{"id":11,"login":"hubot"}`)
 	g.json("GET /orgs/acme/teams/ops", 200, `{"id":20,"slug":"ops"}`)
+}
+
+// runJSON renders a waiting workflow run payload.
+func runJSON(id int64, workflow, branch string) string {
+	return fmt.Sprintf(`{"id":%d,"name":%q,"display_title":"Ship it","head_branch":%q,"event":"push","path":".github/workflows/deploy.yml","html_url":"https://github.com/owner/repo/actions/runs/%d","created_at":"2026-10-09T12:00:00Z","run_started_at":"2026-10-09T12:00:00Z","triggering_actor":{"login":"hubot"}}`,
+		id, workflow, branch, id)
+}
+
+// runsJSON wraps runs in a list response.
+func runsJSON(runs ...string) string {
+	return fmt.Sprintf(`{"total_count":%d,"workflow_runs":[%s]}`, len(runs), strings.Join(runs, ","))
+}
+
+// pendingJSON renders one pending_deployments entry, reviewed by octocat.
+// Options: "approver" (the current user can approve), "no-reviewers", and
+// "timer=MINUTES@STARTED" (STARTED in RFC 3339, or "null").
+func pendingJSON(envID int64, env string, opts ...string) string {
+	canApprove, reviewers := false, `[{"type":"User","reviewer":{"id":10,"login":"octocat"}}]`
+	wait, started := "0", "null"
+	for _, o := range opts {
+		switch {
+		case o == "approver":
+			canApprove = true
+		case o == "no-reviewers":
+			reviewers = "[]"
+		case strings.HasPrefix(o, "timer="):
+			wait, started, _ = strings.Cut(strings.TrimPrefix(o, "timer="), "@")
+			if started != "null" {
+				started = strconv.Quote(started)
+			}
+		}
+	}
+	return fmt.Sprintf(`{"environment":{"id":%d,"name":%q,"html_url":"https://github.com/owner/repo/deployments"},"wait_timer":%s,"wait_timer_started_at":%s,"current_user_can_approve":%t,"reviewers":%s}`,
+		envID, env, wait, started, canApprove, reviewers)
 }

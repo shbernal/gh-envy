@@ -57,6 +57,7 @@ Environment secrets and variables are managed by core gh:
 		newDeleteCmd(f),
 		newCloneCmd(f),
 		newProtectionCmd(f),
+		newWaitingCmd(f),
 	)
 	return root
 }

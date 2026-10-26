@@ -49,10 +49,6 @@ func fetchDetails(c *api.Client, env *api.Environment, want func(string) bool) (
 // record is the full JSON shape of an environment.
 func record(c *api.Client, env *api.Environment, d details) map[string]any {
 	entries, preventSelf := env.Reviewers()
-	reviewers := make([]map[string]any, len(entries))
-	for i, r := range entries {
-		reviewers[i] = map[string]any{"type": r.Type, "name": r.Name(), "id": r.Reviewer.ID}
-	}
 	policies := make([]map[string]any, len(d.BranchPolicies))
 	for i, p := range d.BranchPolicies {
 		policies[i] = map[string]any{"name": p.Name, "type": p.Type, "id": p.ID}
@@ -78,11 +74,20 @@ func record(c *api.Client, env *api.Environment, d details) map[string]any {
 		"name":              env.Name,
 		"preventSelfReview": preventSelf,
 		"protectionApps":    apps,
-		"reviewers":         reviewers,
+		"reviewers":         reviewerRecords(entries),
 		"secrets":           secrets,
 		"updatedAt":         env.UpdatedAt,
 		"url":               c.SettingsURL(env),
 		"variables":         vars,
 		"waitTimer":         env.WaitTimer(),
 	}
+}
+
+// reviewerRecords is the JSON shape of required reviewers.
+func reviewerRecords(entries []api.ReviewerEntry) []map[string]any {
+	out := make([]map[string]any, len(entries))
+	for i, r := range entries {
+		out[i] = map[string]any{"type": r.Type, "name": r.Name(), "id": r.Reviewer.ID}
+	}
+	return out
 }
