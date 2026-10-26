@@ -30,7 +30,8 @@ func NewRoot(f *cmdutil.Factory) *cobra.Command {
 		Use:   "envy <command>",
 		Short: "Manage GitHub deployment environments",
 		Long: `Manage the deployment environments of a repository: list, view, create,
-edit, delete and clone them, with their protection rules.
+edit, delete and clone them, with their protection rules, and approve or
+reject the workflow runs waiting at their gates.
 
 Environment secrets and variables are managed by core gh:
   gh secret set NAME --env ENV
@@ -38,7 +39,8 @@ Environment secrets and variables are managed by core gh:
 		Example: `  $ gh envy list
   $ gh envy create production --reviewer octocat --reviewer my-org/ops --wait-timer 30m --branch main
   $ gh envy view production --json reviewers,waitTimer
-  $ gh envy clone staging qa`,
+  $ gh envy clone staging qa
+  $ gh envy approve -w deploy.yml`,
 		Version:       version(),
 		SilenceErrors: true,
 		SilenceUsage:  true,
@@ -57,6 +59,9 @@ Environment secrets and variables are managed by core gh:
 		newDeleteCmd(f),
 		newCloneCmd(f),
 		newProtectionCmd(f),
+		newWaitingCmd(f),
+		newReviewCmd(f, "approved"),
+		newReviewCmd(f, "rejected"),
 	)
 	return root
 }

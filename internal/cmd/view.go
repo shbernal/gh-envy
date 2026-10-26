@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/cli/go-gh/v2/pkg/tableprinter"
+	"github.com/cli/go-gh/v2/pkg/text"
 	"github.com/spf13/cobra"
 
 	"github.com/shbernal/gh-envy/internal/api"
@@ -18,8 +21,8 @@ func newViewCmd(f *cmdutil.Factory) *cobra.Command {
 		Use:   "view [<environment>]",
 		Short: "View an environment and its protection rules",
 		Long: `Display an environment: required reviewers, wait timer, admin bypass,
-deployment branch and tag policies, custom protection apps, variables and
-secret names.
+deployment branch and tag policies, custom protection apps, variables, secret
+names, the last deployment and the runs waiting at its gate.
 
 With no argument, prompts for an environment.`,
 		Args:              cobra.MaximumNArgs(1),
@@ -64,7 +67,7 @@ With no argument, prompts for an environment.`,
 		},
 	}
 	cmd.Flags().BoolVarP(&web, "web", "w", false, "Open the environment settings in the browser")
-	cmdutil.AddJSONFlags(cmd, &exporter, environmentFields)
+	cmdutil.AddJSONFlags(cmd, &exporter, viewFields)
 	return cmd
 }
 
@@ -122,6 +125,33 @@ func printView(io *cmdutil.IO, c *api.Client, env *api.Environment, d details) {
 		row("Protection apps", strings.Join(parts, ", "))
 	}
 
+	fmt.Fprintf(out, "\n%s\n", io.Bold("Deployments"))
+	if dep := d.LastDeployment; dep == nil {
+		row("Last deployment", none)
+	} else {
+		v := fmt.Sprintf("%s %s by %s, %s", shortSHA(dep.SHA), dep.Ref, dep.Creator.Login, io.Ago(dep.CreatedAt))
+		if dep.State != "" {
+			v += " " + io.Gray("("+dep.State+")")
+		}
+		row("Last deployment", v)
+	}
+	if len(d.Waiting) == 0 {
+		row("Waiting", none)
+	} else {
+		row("Waiting", text.Pluralize(len(d.Waiting), "run"))
+		t := tableprinter.New(out, true, io.Width)
+		for _, g := range d.Waiting {
+			t.AddField("   ")
+			t.AddField(strconv.FormatInt(g.Run.ID, 10))
+			t.AddField(g.Run.Name)
+			t.AddField(g.Run.HeadBranch, tableprinter.WithColor(io.Gray))
+			t.AddField(io.Ago(g.Run.CreatedAt), tableprinter.WithColor(io.Gray))
+			t.AddField(strings.Join(gateReasons(g.Pending, io.Now()), ", "))
+			t.EndRow()
+		}
+		_ = t.Render()
+	}
+
 	fmt.Fprintf(out, "\n%s %s\n", io.Bold("Variables"), io.Gray(fmt.Sprintf("(%d)", len(d.Variables))))
 	for _, v := range d.Variables {
 		row(v.Name, v.Value)
@@ -152,6 +182,14 @@ func printViewRaw(io *cmdutil.IO, c *api.Client, env *api.Environment, d details
 	for i, s := range d.Secrets {
 		secrets[i] = s.Name
 	}
+	lastDeployment := ""
+	if dep := d.LastDeployment; dep != nil {
+		lastDeployment = strings.Join([]string{dep.SHA, dep.Ref, dep.Creator.Login, dep.State, dep.CreatedAt.Format(time.RFC3339)}, " ")
+	}
+	waiting := make([]string, len(d.Waiting))
+	for i, g := range d.Waiting {
+		waiting[i] = strconv.FormatInt(g.Run.ID, 10)
+	}
 	lines := [][2]string{
 		{"name", env.Name},
 		{"repository", c.FullName()},
@@ -164,9 +202,19 @@ func printViewRaw(io *cmdutil.IO, c *api.Client, env *api.Environment, d details
 		{"protection-apps", strings.Join(apps, ",")},
 		{"variables", strings.Join(vars, ",")},
 		{"secrets", strings.Join(secrets, ",")},
+		{"last-deployment", lastDeployment},
+		{"waiting", strings.Join(waiting, ",")},
 		{"url", c.SettingsURL(env)},
 	}
 	for _, l := range lines {
 		fmt.Fprintf(io.Out, "%s:\t%s\n", l[0], l[1])
 	}
+}
+
+// shortSHA is the 7-character abbreviation of a commit SHA.
+func shortSHA(sha string) string {
+	if len(sha) > 7 {
+		return sha[:7]
+	}
+	return sha
 }

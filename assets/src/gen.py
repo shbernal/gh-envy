@@ -25,7 +25,7 @@ def banner(t):
     # prompt line
     parts.append(
         f'<text x="{x0}" y="{wm_base-104}" font-family="{FONT}" font-size="22" font-weight="400" fill="{m}" fill-opacity="0.75">'
-        f'<tspan fill="{a}" fill-opacity="1">$</tspan> gh envy clone staging production</text>'
+        f'<tspan fill="{a}" fill-opacity="1">$</tspan> gh envy approve -w deploy.yml</text>'
     )
     parts.append(
         f'<text x="{x0}" y="{wm_base}" font-family="{FONT}" font-size="{wm_size}" font-weight="700" fill="{m}">'

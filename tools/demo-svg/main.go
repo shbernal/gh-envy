@@ -66,6 +66,11 @@ var scenes = []scene{
 			args:  []string{"view", "canary", "--json", "name,reviewers,waitTimer,branchPolicies", "--jq", "{env: .name, reviewers: [.reviewers[].name], wait: .waitTimer, refs: [.branchPolicies[].name]}"},
 		},
 	}},
+	{"approve", "acme/shop", []step{
+		{shown: []string{"gh envy waiting"}, args: []string{"waiting"}},
+		{shown: []string{"gh envy approve -w deploy.yml -c 'ship it'"}, args: []string{"approve", "-w", "deploy.yml", "-c", "ship it"}},
+		{shown: []string{"gh envy waiting"}, args: []string{"waiting"}},
+	}},
 	{"clone", "acme/shop", []step{
 		{shown: []string{"gh envy clone staging qa"}, args: []string{"clone", "staging", "qa"}},
 		{shown: []string{"gh envy delete preview/pr-128"}, args: []string{"delete", "preview/pr-128"}, answers: []string{"preview/pr-128"}},
@@ -147,7 +152,14 @@ func (p *surveyPrompter) Password(prompt string) (string, error) {
 }
 
 func (p *surveyPrompter) Select(string, string, []string) (int, error) { return 0, nil }
-func (p *surveyPrompter) Confirm(string, bool) (bool, error)           { return true, nil }
+func (p *surveyPrompter) MultiSelect(_ string, _, options []string) ([]int, error) {
+	all := make([]int, len(options))
+	for i := range all {
+		all[i] = i
+	}
+	return all, nil
+}
+func (p *surveyPrompter) Confirm(string, bool) (bool, error) { return true, nil }
 
 func record(sc scene) ([]line, float64) {
 	now := time.Now()

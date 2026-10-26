@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,6 +28,13 @@ type fakeGH struct {
 	t     *testing.T
 	mux   *http.ServeMux
 	calls []call
+	// execs records the gh commands a run handed off to.
+	execs [][]string
+}
+
+func (g *fakeGH) exec(args ...string) error {
+	g.execs = append(g.execs, args)
+	return nil
 }
 
 func newFakeGH(t *testing.T) *fakeGH {
@@ -111,6 +119,10 @@ func (p *stubPrompter) Select(prompt, _ string, _ []string) (int, error) {
 	return p.next(prompt).(int), nil
 }
 
+func (p *stubPrompter) MultiSelect(prompt string, _, _ []string) ([]int, error) {
+	return p.next(prompt).([]int), nil
+}
+
 func (p *stubPrompter) Input(prompt, _ string) (string, error) {
 	return p.next(prompt).(string), nil
 }
@@ -145,7 +157,7 @@ func run(t *testing.T, g *fakeGH, tty bool, prompter *stubPrompter, args ...stri
 	if prompter == nil {
 		prompter = &stubPrompter{t: t}
 	}
-	f := &cmdutil.Factory{IO: io, Transport: g, Prompter: prompter, Browser: b, Repo: &repo}
+	f := &cmdutil.Factory{IO: io, Transport: g, Prompter: prompter, Browser: b, Repo: &repo, Exec: g.exec}
 	code := Execute(f, args)
 	return result{code, out.String(), errOut.String()}, b
 }
@@ -188,8 +200,53 @@ func (g *fakeGH) emptyDetails(name string) {
 	g.json("GET "+envBase+name+"/secrets", 200, `{"total_count":0,"secrets":[]}`)
 }
 
+// noDeployments serves a repository with no deployments and no waiting runs.
+func (g *fakeGH) noDeployments() {
+	g.json("GET /repos/owner/repo/deployments", 200, `[]`)
+	g.json("GET /repos/owner/repo/actions/runs", 200, runsJSON())
+}
+
 func (g *fakeGH) users() {
 	g.json("GET /users/octocat", 200, `{"id":10,"login":"octocat"}`)
 	g.json("GET /users/hubot", 200, `{"id":11,"login":"hubot"}`)
 	g.json("GET /orgs/acme/teams/ops", 200, `{"id":20,"slug":"ops"}`)
+}
+
+// runJSON renders a waiting workflow run payload.
+func runJSON(id int64, workflow, branch string) string {
+	return fmt.Sprintf(`{"id":%d,"name":%q,"display_title":"Ship it","head_branch":%q,"event":"push","path":".github/workflows/deploy.yml","html_url":"https://github.com/owner/repo/actions/runs/%d","created_at":"2026-10-09T12:00:00Z","run_started_at":"2026-10-09T12:00:00Z","triggering_actor":{"login":"hubot"}}`,
+		id, workflow, branch, id)
+}
+
+// runsJSON wraps runs in a list response.
+func runsJSON(runs ...string) string {
+	return fmt.Sprintf(`{"total_count":%d,"workflow_runs":[%s]}`, len(runs), strings.Join(runs, ","))
+}
+
+// pendingJSON renders one pending_deployments entry, reviewed by octocat.
+// Options: "approver" (the current user can approve), "no-reviewers", and
+// "timer=MINUTES@STARTED" (STARTED in RFC 3339, or "null").
+func pendingJSON(envID int64, env string, opts ...string) string {
+	canApprove, reviewers := false, `[{"type":"User","reviewer":{"id":10,"login":"octocat"}}]`
+	wait, started := "0", "null"
+	for _, o := range opts {
+		switch {
+		case o == "approver":
+			canApprove = true
+		case o == "no-reviewers":
+			reviewers = "[]"
+		case strings.HasPrefix(o, "timer="):
+			wait, started, _ = strings.Cut(strings.TrimPrefix(o, "timer="), "@")
+			if started != "null" {
+				started = strconv.Quote(started)
+			}
+		}
+	}
+	return fmt.Sprintf(`{"environment":{"id":%d,"name":%q,"html_url":"https://github.com/owner/repo/deployments"},"wait_timer":%s,"wait_timer_started_at":%s,"current_user_can_approve":%t,"reviewers":%s}`,
+		envID, env, wait, started, canApprove, reviewers)
+}
+
+// deploymentJSON renders one deployment payload.
+func deploymentJSON(id int64, ref, sha string) string {
+	return fmt.Sprintf(`{"id":%d,"sha":%q,"ref":%q,"environment":"production","creator":{"login":"hubot"},"created_at":"2026-10-09T12:00:00Z"}`, id, sha, ref)
 }

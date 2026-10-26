@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"io"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -69,6 +71,7 @@ func TestView(t *testing.T) {
 	g.json("GET "+envBase+"production/deployment_protection_rules", 200, `{"total_count":1,"custom_deployment_protection_rules":[{"id":5,"enabled":true,"app":{"id":99,"slug":"datadog"}}]}`)
 	g.json("GET "+envBase+"production/variables", 200, `{"total_count":1,"variables":[{"name":"REGION","value":"eu-west-1"}]}`)
 	g.json("GET "+envBase+"production/secrets", 200, `{"total_count":1,"secrets":[{"name":"DEPLOY_KEY","updated_at":"2026-10-08T12:00:00Z"}]}`)
+	g.noDeployments()
 
 	r, _ := run(t, g, true, nil, "view", "production")
 	if r.code != 0 {
@@ -81,6 +84,7 @@ func TestView(t *testing.T) {
 		"main (branch), v* (tag)",
 		"datadog",
 		"REGION", "eu-west-1", "DEPLOY_KEY",
+		"Last deployment      none", "Waiting              none",
 		"https://github.com/owner/repo/settings/environments/42/edit")
 
 	r, _ = run(t, g, false, nil, "view", "production")
@@ -90,6 +94,55 @@ func TestView(t *testing.T) {
 	if len(b.opened) != 1 || !strings.HasSuffix(b.opened[0], "/environments/42/edit") {
 		t.Errorf("opened %v", b.opened)
 	}
+}
+
+func TestViewDeployments(t *testing.T) {
+	g := newFakeGH(t)
+	g.env("production")
+	g.emptyDetails("production")
+	var query string
+	g.mux.HandleFunc("GET /repos/owner/repo/deployments", func(w http.ResponseWriter, req *http.Request) {
+		query = req.URL.RawQuery
+		_, _ = io.WriteString(w, "["+deploymentJSON(5, "main", "abc1234def5678")+"]")
+	})
+	g.json("GET /repos/owner/repo/deployments/5/statuses", 200, `[{"state":"success","environment_url":"https://app.example.com","log_url":"https://github.com/owner/repo/actions/runs/99"}]`)
+	g.json("GET "+runsBase, 200, runsJSON(runJSON(101, "Deploy", "main"), runJSON(102, "Deploy", "dev")))
+	g.json("GET "+runsBase+"/101/pending_deployments", 200, "["+pendingJSON(1, "staging")+","+pendingJSON(2, "production", "approver")+"]")
+	g.json("GET "+runsBase+"/102/pending_deployments", 200, "["+pendingJSON(1, "staging")+"]")
+
+	r, _ := run(t, g, true, nil, "view", "production")
+	if r.code != 0 {
+		t.Fatalf("exit %d: %s", r.code, r.errOut)
+	}
+	assertContains(t, r.out, "Last deployment      abc1234 main by hubot, about 1 day ago (success)", "Waiting              1 run\n", "101", "Deploy", "you")
+	assertContains(t, query, "environment=production")
+	if strings.Contains(r.out, "102") {
+		t.Errorf("listed a run waiting on another environment:\n%s", r.out)
+	}
+
+	r, _ = run(t, g, false, nil, "view", "production")
+	assertContains(t, r.out, "last-deployment:\tabc1234def5678 main hubot success 2026-10-09T12:00:00Z\n", "waiting:\t101\n")
+
+	r, _ = run(t, g, false, nil, "view", "production", "--json", "lastDeployment,waitingRuns", "--jq", "[.lastDeployment.url, .waitingRuns[].runId]")
+	if want := `["https://app.example.com",101]`; strings.TrimSpace(r.out) != want {
+		t.Errorf("json = %s, want %s", r.out, want)
+	}
+}
+
+func TestViewJSONSkipsDeployments(t *testing.T) {
+	g := newFakeGH(t)
+	g.env("production")
+	r, _ := run(t, g, false, nil, "view", "production", "--json", "name")
+	if r.code != 0 {
+		t.Fatalf("exit %d: %s", r.code, r.errOut)
+	}
+	for _, c := range g.calls {
+		if c.Path != envBase+"production" {
+			t.Errorf("unexpected request %s %s", c.Method, c.Path)
+		}
+	}
+	r, _ = run(t, g, false, nil, "list", "--json", "lastDeployment")
+	assertContains(t, r.errOut, `Unknown JSON field: "lastDeployment"`)
 }
 
 func TestViewNotFound(t *testing.T) {
@@ -106,6 +159,7 @@ func TestViewPromptsForEnvironment(t *testing.T) {
 	g.json("GET /repos/owner/repo/environments", 200, listJSON(envJSON("a"), envJSON("b")))
 	g.env("b")
 	g.emptyDetails("b")
+	g.noDeployments()
 	r, _ := run(t, g, true, &stubPrompter{t: t, answers: []any{1}}, "view")
 	if r.code != 0 || !strings.Contains(r.out, "b") {
 		t.Fatalf("exit %d: %s %s", r.code, r.out, r.errOut)
@@ -118,6 +172,7 @@ func TestEnvironmentNamesAreEscaped(t *testing.T) {
 	g := newFakeGH(t)
 	g.json("GET "+envBase+"feature%2Fone", 200, envJSON("feature/one"))
 	g.emptyDetails("feature%2Fone")
+	g.noDeployments()
 	r, _ := run(t, g, false, nil, "view", "feature/one")
 	if r.code != 0 {
 		t.Fatalf("exit %d: %s", r.code, r.errOut)
@@ -434,4 +489,23 @@ func TestWaitTimer(t *testing.T) {
 			t.Errorf("formatWait(%d) = %q, want %q", in, got, want)
 		}
 	}
+}
+
+func TestCreateWarnsAboutDroppedReviewers(t *testing.T) {
+	g := newFakeGH(t)
+	g.users()
+	g.json("GET "+envBase+"production", 404, `{"message":"Not Found"}`)
+	g.json("PUT "+envBase+"production", 200, envJSON("production", "reviewers"))
+	g.json("GET "+envBase+"staging", 404, `{"message":"Not Found"}`)
+	g.json("PUT "+envBase+"staging", 200, envJSON("staging"))
+
+	r, _ := run(t, g, false, nil, "create", "production", "-r", "octocat", "-r", "acme/ops")
+	if r.code != 0 || r.errOut != "" {
+		t.Errorf("kept reviewers: exit %d err %q", r.code, r.errOut)
+	}
+	r, _ = run(t, g, false, nil, "create", "staging", "-r", "@hubot")
+	if r.code != 0 {
+		t.Fatalf("exit %d: %s", r.code, r.errOut)
+	}
+	assertContains(t, r.errOut, "! GitHub dropped required reviewer hubot: reviewers need access to owner/repo")
 }

@@ -19,9 +19,28 @@ func Seed(now time.Time) *State {
 	custom := &map[string]any{"protected_branches": false, "custom_branch_policies": true}
 	protected := &map[string]any{"protected_branches": true, "custom_branch_policies": false}
 
+	timerStarted := ago(2 * time.Minute)
+
 	return &State{
 		NextID: 1000,
-		Now:    func() time.Time { return now },
+		Login:  "octocat",
+		Runs: map[string][]*Run{DemoRepo: {
+			{
+				ID: 7731042, Workflow: "Deploy", Path: ".github/workflows/deploy.yml", Title: "Release v2.4.0",
+				Branch: "main", Actor: "hubot", CreatedAt: ago(14 * time.Minute),
+				Gates: []Gate{{Env: "production", CanApprove: true}},
+			},
+			{
+				ID: 7730988, Workflow: "Migrate", Path: ".github/workflows/migrate.yml", Title: "Add orders index",
+				Branch: "main", Actor: "monalisa", CreatedAt: ago(3 * time.Minute),
+				Gates: []Gate{{Env: "staging", TimerStarted: &timerStarted}},
+			},
+		}},
+		Deployments: map[string][]*Deployment{DemoRepo: {
+			{ID: 5001, Env: "production", SHA: "4e1c9b2a7d03", Ref: "v2.3.1", Creator: "octocat", CreatedAt: ago(2 * day), State: "success", URL: "https://shop.acme.com"},
+			{ID: 5000, Env: "staging", SHA: "b82f05e6c1a9", Ref: "main", Creator: "hubot", CreatedAt: ago(3 * time.Hour), State: "success", URL: "https://staging.shop.acme.com"},
+		}},
+		Now: func() time.Time { return now },
 		Users: map[string]Account{
 			"octocat":               {ID: 1, Type: "User"},
 			"hubot":                 {ID: 2, Type: "User"},

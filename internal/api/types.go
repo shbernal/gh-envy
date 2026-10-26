@@ -84,6 +84,51 @@ type Secret struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// Actor is the login of a user attached to a run or deployment.
+type Actor struct {
+	Login string `json:"login"`
+}
+
+// WorkflowRun is an Actions workflow run.
+type WorkflowRun struct {
+	ID              int64     `json:"id"`
+	Name            string    `json:"name"`
+	DisplayTitle    string    `json:"display_title"`
+	HeadBranch      string    `json:"head_branch"`
+	Event           string    `json:"event"`
+	HTMLURL         string    `json:"html_url"`
+	CreatedAt       time.Time `json:"created_at"`
+	RunStartedAt    time.Time `json:"run_started_at"`
+	TriggeringActor Actor     `json:"triggering_actor"`
+	Path            string    `json:"path"`
+}
+
+// PendingDeployment is an environment gate a waiting run is held at.
+type PendingDeployment struct {
+	Environment struct {
+		ID      int64  `json:"id"`
+		Name    string `json:"name"`
+		HTMLURL string `json:"html_url"`
+	} `json:"environment"`
+	WaitTimer             int             `json:"wait_timer"`
+	WaitTimerStartedAt    *time.Time      `json:"wait_timer_started_at"`
+	CurrentUserCanApprove bool            `json:"current_user_can_approve"`
+	Reviewers             []ReviewerEntry `json:"reviewers"`
+}
+
+// Deployment is a deployment to an environment with the state of its latest status.
+type Deployment struct {
+	ID        int64     `json:"id"`
+	SHA       string    `json:"sha"`
+	Ref       string    `json:"ref"`
+	Creator   Actor     `json:"creator"`
+	CreatedAt time.Time `json:"created_at"`
+	// State and URL come from the latest deployment status; State is empty
+	// when the deployment has no status yet.
+	State string `json:"-"`
+	URL   string `json:"-"`
+}
+
 // ReviewerRef is a reviewer in the shape the PUT endpoint expects.
 type ReviewerRef struct {
 	Type string `json:"type"`

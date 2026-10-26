@@ -20,7 +20,7 @@ Piped output is tab-separated with no header: name, reviewers (comma-separated),
 gh envy view [<environment>] [--web] [--json FIELDS [--jq EXPR | --template TMPL]]
 ```
 
-Shows protection rules, branch and tag patterns, protection apps, variables with values, and secret names. `--web` opens the environment's settings page.
+Shows protection rules, branch and tag patterns, protection apps, variables with values, secret names, the last deployment and the runs waiting at the environment's gate. `--web` opens the environment's settings page.
 
 Piped output is `key:\tvalue` lines.
 
@@ -96,6 +96,42 @@ gh envy protection disable <environment> <app-slug>
 
 Manages custom deployment protection rules, which gate deployments on a GitHub App. An app must be installed on the repository before it shows in `--available` and can be enabled.
 
+## waiting
+
+```
+gh envy waiting [<environment>] [-w WORKFLOW] [-b BRANCH] [-L N] [--json FIELDS [--jq EXPR | --template TMPL]]
+```
+
+Lists workflow runs held at an environment gate, one row per run and environment. A run waiting on two environments shows twice, so `<environment>` filters by gate. `-w` takes a workflow file name (`deploy.yml`), ID or name.
+
+`--limit` (default 30) counts runs, not rows. Each run costs one more API request to read its gates.
+
+The GATE column says what holds the run:
+
+| GATE | Meaning |
+| --- | --- |
+| `you` | The environment has required reviewers and you are one of them. |
+| `reviewers` | The environment has required reviewers and you can't approve. |
+| `timer 4m` | A wait timer is running, with the time left. |
+| `app` | No reviewers and no running timer, so a protection app or another rule holds the run. |
+
+Values combine, as in `you, timer 4m`. Piped output is tab-separated with no header: environment, workflow, title, branch, run ID, created time in RFC 3339, gate.
+
+## approve, reject
+
+```
+gh envy approve [<run-id> | <run-url>] [-e ENV]... [-w WORKFLOW] [-b BRANCH] [-c COMMENT] [--watch]
+gh envy reject  [<run-id> | <run-url>] [-e ENV]... [-w WORKFLOW] [-b BRANCH] [-c COMMENT]
+```
+
+Approves or rejects a run waiting at required reviewers. A rejected run fails.
+
+The run is an ID or a URL such as `https://github.com/OWNER/REPO/actions/runs/123`, with or without a `/job/N` or `/attempts/N` suffix. A URL selects its repository and overrides `-R`. Without a run, gh envy looks at the waiting runs that match `-e`, `-w` and `-b`. It uses the only match, asks which one in a terminal, and fails listing the candidates otherwise.
+
+`-e` names the environments to review and fails if the run isn't waiting on one of them. Without `-e`, gh envy acts on every environment of the run you can review. In a terminal it asks first, with all of them selected. Environments you can't review are skipped with a warning that says why. If none are left, the command fails.
+
+`-c` records a comment with the review. `approve --watch` runs `gh run watch` on the run afterwards and needs a terminal.
+
 ## JSON fields
 
 `list` and `view` accept:
@@ -113,9 +149,31 @@ Manages custom deployment protection rules, which gate deployments on a GitHub A
 | `variables` | `[{name, value, updatedAt}]` |
 | `secrets` | `[{name, updatedAt}]` |
 
-Fields that need extra API calls (`branchPolicies`, `protectionApps`, `variables`, `secrets`) are fetched only when requested.
+`view` also accepts:
+
+| Field | Type |
+| --- | --- |
+| `lastDeployment` | `{sha, ref, creator, state, createdAt, url}`, or `null` with no deployments. `state` comes from the latest status, `url` is its environment URL or log URL. |
+| `waitingRuns` | runs waiting at this environment, as `waiting --json` returns them |
+
+Fields that need extra API calls (`branchPolicies`, `protectionApps`, `variables`, `secrets`, `lastDeployment`, `waitingRuns`) are fetched only when requested.
+
+`waiting` accepts:
+
+| Field | Type |
+| --- | --- |
+| `runId`, `url` | run ID and web URL |
+| `workflow`, `title`, `branch`, `event` | workflow name, run title, head branch, triggering event |
+| `actor` | login of the user who triggered the run |
+| `createdAt` | timestamp |
+| `environment`, `environmentId` | the environment the run waits on |
+| `canApprove` | whether you can review this gate |
+| `reviewers` | `[{type, name, id}]`, as in `view` |
+| `waitTimer`, `waitTimerStartedAt` | minutes, and when the timer started or `null` |
 
 ## Plans and permissions
 
 - Managing environments needs admin access to the repository. A token with the `repo` scope is enough.
+- Required reviewers need access to the repository, as collaborators or through a team. GitHub accepts anyone else without an error and drops them from the list, so gh envy warns when a reviewer you asked for is missing after the change.
+- Approving and rejecting needs write access to the repository and a place among the environment's required reviewers, directly or through a team. With prevent-self-review on, GitHub refuses a review from the person who triggered the run, even a repository admin with admin bypass on.
 - On private repositories, required reviewers and wait timers need GitHub Pro, Team or Enterprise. Branch policies and admin bypass work on every plan. gh envy only sends the plan-gated fields when they are set or being cleared, so plain environments work on free plans.
