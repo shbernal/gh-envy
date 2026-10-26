@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	ghapi "github.com/cli/go-gh/v2/pkg/api"
@@ -59,6 +60,11 @@ func (c *Client) envPath(env string, suffix string) string {
 }
 
 func (c *Client) do(method, path string, body any, out any) error {
+	return translate(c.doRaw(method, path, body, out))
+}
+
+// doRaw is do without error translation.
+func (c *Client) doRaw(method, path string, body any, out any) error {
 	// url.PathEscape leaves "." and ".." intact; a server or proxy that
 	// normalizes them would retarget the request, e.g. DELETE on the repository.
 	for _, seg := range strings.Split(strings.SplitN(path, "?", 2)[0], "/") {
@@ -87,7 +93,7 @@ func (c *Client) do(method, path string, body any, out any) error {
 	} else {
 		err = c.rest.Do(method, path, reader, out)
 	}
-	return translate(err)
+	return err
 }
 
 // translate turns API errors into messages that say what to do.
@@ -265,6 +271,117 @@ func (c *Client) SetSecret(env, name, value string) error {
 	}
 	body := map[string]string{"encrypted_value": base64.StdEncoding.EncodeToString(sealed), "key_id": pk.KeyID}
 	return c.do(http.MethodPut, c.envPath(env, "/secrets/"+url.PathEscape(name)), body, nil)
+}
+
+// ListWaitingRuns returns up to limit runs held at an environment gate, all
+// when limit is 0. workflow is a file name, an ID or a display name; branch
+// filters by head branch. Both are optional.
+func (c *Client) ListWaitingRuns(workflow, branch string, limit int) ([]WorkflowRun, error) {
+	path := c.repoPath("actions/runs")
+	if workflow != "" {
+		id, err := c.resolveWorkflow(workflow)
+		if err != nil {
+			return nil, err
+		}
+		path = c.repoPath("actions/workflows/%s/runs", id)
+	}
+	q := url.Values{"status": {"waiting"}}
+	if branch != "" {
+		q.Set("branch", branch)
+	}
+	return paginate[WorkflowRun](c, path+"?"+q.Encode(), limit, "workflow_runs")
+}
+
+// resolveWorkflow returns the path segment the API accepts for a workflow:
+// file names and IDs as given, display names looked up by name.
+func (c *Client) resolveWorkflow(workflow string) (string, error) {
+	if _, err := strconv.ParseInt(workflow, 10, 64); err == nil || strings.HasSuffix(workflow, ".yml") || strings.HasSuffix(workflow, ".yaml") {
+		return url.PathEscape(workflow), nil
+	}
+	workflows, err := paginate[struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+	}](c, c.repoPath("actions/workflows"), 0, "workflows")
+	if err != nil {
+		return "", err
+	}
+	for _, w := range workflows {
+		if strings.EqualFold(w.Name, workflow) {
+			return strconv.FormatInt(w.ID, 10), nil
+		}
+	}
+	return "", fmt.Errorf("could not find any workflows named %q in %s", workflow, c.FullName())
+}
+
+// GetRun returns one workflow run.
+func (c *Client) GetRun(runID int64) (*WorkflowRun, error) {
+	var run WorkflowRun
+	if err := c.do(http.MethodGet, c.repoPath("actions/runs/%d", runID), nil, &run); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil, fmt.Errorf("run %d %w in %s", runID, ErrNotFound, c.FullName())
+		}
+		return nil, err
+	}
+	return &run, nil
+}
+
+// PendingDeployments returns the environment gates a run is waiting at.
+func (c *Client) PendingDeployments(runID int64) ([]PendingDeployment, error) {
+	var pending []PendingDeployment
+	if err := c.do(http.MethodGet, c.repoPath("actions/runs/%d/pending_deployments", runID), nil, &pending); err != nil {
+		return nil, err
+	}
+	return pending, nil
+}
+
+// ReviewDeployments approves or rejects a run's gates at the given
+// environments. state is "approved" or "rejected".
+func (c *Client) ReviewDeployments(runID int64, envIDs []int64, state, comment string) error {
+	body := map[string]any{"environment_ids": envIDs, "state": state, "comment": comment}
+	err := c.doRaw(http.MethodPost, c.repoPath("actions/runs/%d/pending_deployments", runID), body, nil)
+	var httpErr *ghapi.HTTPError
+	if errors.As(err, &httpErr) && (httpErr.StatusCode == http.StatusForbidden || httpErr.StatusCode == http.StatusUnprocessableEntity) {
+		return fmt.Errorf("%s\nReviewing a deployment needs write access to the repository and a place among the environment's required reviewers", httpErr.Message)
+	}
+	return translate(err)
+}
+
+// CurrentUser returns the login of the authenticated user.
+func (c *Client) CurrentUser() (string, error) {
+	var user Actor
+	if err := c.do(http.MethodGet, "user", nil, &user); err != nil {
+		return "", err
+	}
+	return user.Login, nil
+}
+
+// LastDeployment returns the latest deployment to env, nil when there is none.
+func (c *Client) LastDeployment(env string) (*Deployment, error) {
+	var deployments []Deployment
+	q := url.Values{"environment": {env}, "per_page": {"1"}}
+	if err := c.do(http.MethodGet, c.repoPath("deployments?%s", q.Encode()), nil, &deployments); err != nil {
+		return nil, err
+	}
+	if len(deployments) == 0 {
+		return nil, nil
+	}
+	d := &deployments[0]
+	var statuses []struct {
+		State          string `json:"state"`
+		EnvironmentURL string `json:"environment_url"`
+		LogURL         string `json:"log_url"`
+	}
+	if err := c.do(http.MethodGet, c.repoPath("deployments/%d/statuses?per_page=1", d.ID), nil, &statuses); err != nil {
+		return nil, err
+	}
+	if len(statuses) > 0 {
+		d.State = statuses[0].State
+		d.URL = statuses[0].EnvironmentURL
+		if d.URL == "" {
+			d.URL = statuses[0].LogURL
+		}
+	}
+	return d, nil
 }
 
 // ResolveReviewer turns "login" or "org/team-slug" into a reviewer reference.
