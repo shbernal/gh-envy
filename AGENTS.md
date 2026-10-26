@@ -1,6 +1,6 @@
 # AI project guidelines
 
-`gh-envy`: a `gh` CLI extension (Go) that manages GitHub deployment environments, invoked as `gh envy`. It covers what core `gh` lacks (cli/cli#5149): environment CRUD, protection rules, branch/tag deployment policies and custom protection apps, with `--json/--jq/--template` output in core `gh` style.
+`gh-envy`: a `gh` CLI extension (Go) that manages GitHub deployment environments, invoked as `gh envy`. It covers what core `gh` lacks (cli/cli#5149, cli/cli#5773): environment CRUD, protection rules, branch/tag deployment policies, custom protection apps, and listing/approving/rejecting runs waiting at environment gates, with `--json/--jq/--template` output in core `gh` style.
 
 - Key commands
   - `go build -o gh-envy . && gh extension install .` (local install, rebuild to update)

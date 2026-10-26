@@ -1,5 +1,6 @@
-// Package fakegh is an in-memory stand-in for the GitHub environment
-// endpoints, used to record the README demos without touching real repositories.
+// Package fakegh is an in-memory stand-in for the GitHub environment, deployment
+// and run review endpoints, used to record the README demos without touching
+// real repositories.
 package fakegh
 
 import (
@@ -85,8 +86,12 @@ type State struct {
 	NextID int64               `json:"next_id"`
 	Apps   map[string][]string `json:"apps"` // installable protection apps by repo
 	Users  map[string]Account  `json:"-"`
-	Now    func() time.Time    `json:"-"`
-	mu     sync.Mutex
+	// Runs and Deployments are by repo, newest first. Login is the current user.
+	Runs        map[string][]*Run        `json:"-"`
+	Deployments map[string][]*Deployment `json:"-"`
+	Login       string                   `json:"-"`
+	Now         func() time.Time         `json:"-"`
+	mu          sync.Mutex
 }
 
 func (s *State) id() int64 {
@@ -328,6 +333,7 @@ func (s *State) Handler() http.Handler {
 		}
 		notFound(w)
 	})
+	s.runHandlers(mux)
 	return mux
 }
 

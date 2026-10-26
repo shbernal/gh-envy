@@ -5,7 +5,7 @@
   <img alt="gh envy: deployment environments for the GitHub CLI" src="assets/banner/banner-light.svg" width="100%">
 </picture>
 
-Create, inspect and gate GitHub deployment environments from the terminal.
+Create, inspect and gate GitHub deployment environments from the terminal, then approve the runs they hold.
 
 [![Release][release-badge]][release]
 [![CI][ci-badge]][ci]
@@ -30,12 +30,14 @@ Create, inspect and gate GitHub deployment environments from the terminal.
 
 `gh envy` is a [GitHub CLI](https://cli.github.com) extension that fills in the `gh env` command core gh still lacks. The request, [cli/cli#5149](https://github.com/cli/cli/issues/5149), has been open since 2022.
 
-It manages a repository's deployment environments and the rules that gate them:
+It manages a repository's deployment environments, the rules that gate them, and the runs those gates hold back:
 
 - List and view environments, with reviewers, wait timer, allowed branches and tags, protection apps, variables and secret names
 - Create and edit protection rules with flags, or with an interactive editor
 - Clone an environment within a repository or to another one
 - Delete environments, with a typed confirmation
+- List runs waiting at an environment gate, then approve or reject them ([cli/cli#5773](https://github.com/cli/cli/issues/5773), open since 2022)
+- See what was last deployed to an environment
 - `--json`, `--jq` and `--template` output with the same flags as core gh
 
 ## Why gh envy?
@@ -49,6 +51,7 @@ Core gh sets an environment's secrets and variables with `gh secret set --env`, 
 | Branch and tag patterns | ✓ | | | on create, from CSV | ✓ |
 | Protection apps | ✓ | | | | ✓ |
 | Copy an environment | ✓ | | | | |
+| Approve or reject waiting runs | ✓ | [cli/cli#5773] | | | |
 | `--json` / `--jq` / `--template` | ✓ | | `--json` | CSV report | |
 | Works without state files or config | ✓ | ✓ | ✓ | | |
 | Maintained | ✓ | ✓ | last release 2022 | ✓ | ✓ |
@@ -85,15 +88,27 @@ The command is `gh envy`. Its name stays clear of `gh env`, so it keeps working 
    gh envy view production
    ```
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/demo/create-dark.svg">
+  <img alt="gh envy create with reviewers, wait timer and patterns, gh envy edit adding a reviewer, then view with --json and --jq" src="assets/demo/create-light.svg" width="100%">
+</picture>
+
 4. Spin up a staging environment with the same rules:
 
    ```sh
    gh envy clone production staging
    ```
 
+5. When a deploy workflow reaches production, see what it waits on and approve it:
+
+   ```sh
+   gh envy waiting production
+   gh envy approve -w deploy.yml
+   ```
+
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/demo/create-dark.svg">
-  <img alt="gh envy create with reviewers, wait timer and patterns, gh envy edit adding a reviewer, then view with --json and --jq" src="assets/demo/create-light.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/demo/approve-dark.svg">
+  <img alt="gh envy waiting listing a run held for review at production and one held by a wait timer at staging, gh envy approve -w deploy.yml, then gh envy waiting again" src="assets/demo/approve-light.svg" width="100%">
 </picture>
 
 ## Commands
@@ -101,12 +116,15 @@ The command is `gh envy`. Its name stays clear of `gh env`, so it keeps working 
 | Command | What it does |
 | --- | --- |
 | `gh envy list` | Environments and a summary of their protection |
-| `gh envy view <env>` | One environment in full; `--web` opens its settings |
+| `gh envy view <env>` | One environment in full, with its last deployment and waiting runs; `--web` opens its settings |
 | `gh envy create <env>` | New environment, with `--reviewer`, `--wait-timer`, `--branch`, `--tag`, `--protected-branches`, `--prevent-self-review`, `--admin-bypass`, `--secret` |
 | `gh envy edit <env>` | Change only what you name; `--add-*` and `--remove-*` change sets in place |
 | `gh envy clone <src> <dst>` | Copy rules, patterns, apps and variables; prints the secrets left to set |
 | `gh envy delete <env>...` | Delete, after typing the name or with `--yes` |
 | `gh envy protection list\|enable\|disable` | Custom deployment protection apps |
+| `gh envy waiting [<env>]` | Runs held at an environment gate, and what holds them |
+| `gh envy approve [<run>]` | Approve a waiting deployment; `--watch` follows the run |
+| `gh envy reject [<run>]` | Reject a waiting deployment |
 
 Every command takes `-R OWNER/REPO`. See the [command reference](docs/commands.md) for every flag and JSON field.
 
@@ -134,6 +152,7 @@ flowchart LR
 - [Command reference](docs/commands.md): every flag, JSON field, and the plan and permission requirements
 - [Contributing](CONTRIBUTING.md): tests, demos and releases
 
+[cli/cli#5773]: https://github.com/cli/cli/issues/5773
 [chelnak/gh-environments]: https://github.com/chelnak/gh-environments
 [katiem0/gh-environments]: https://github.com/katiem0/gh-environments
 
