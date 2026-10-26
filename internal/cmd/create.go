@@ -58,6 +58,8 @@ type plan struct {
 	protection api.Protection
 	// patterns is the desired custom policy pattern set, nil when unchanged.
 	patterns []pattern
+	// names labels reviewers in warnings.
+	names map[api.ReviewerRef]string
 }
 
 // resolve computes the desired state from the current one and the changed flags.
@@ -69,6 +71,7 @@ func (p *protectionFlags) resolve(fs *pflag.FlagSet, c *api.Client, current api.
 	if p.noReviewers && (changed("reviewer") || changed("add-reviewer")) {
 		return plan{}, cmdutil.FlagError{Err: errors.New("`--no-reviewers` cannot be combined with `--reviewer` or `--add-reviewer`")}
 	}
+	labels := map[api.ReviewerRef]string{}
 	resolveAll := func(names []string) ([]api.ReviewerRef, error) {
 		refs := make([]api.ReviewerRef, 0, len(names))
 		for _, n := range names {
@@ -77,6 +80,7 @@ func (p *protectionFlags) resolve(fs *pflag.FlagSet, c *api.Client, current api.
 				return nil, err
 			}
 			refs = append(refs, ref)
+			labels[ref] = strings.TrimPrefix(strings.TrimSpace(n), "@")
 		}
 		return refs, nil
 	}
@@ -147,7 +151,7 @@ func (p *protectionFlags) resolve(fs *pflag.FlagSet, c *api.Client, current api.
 	if modes > 1 {
 		return plan{}, cmdutil.FlagError{Err: errors.New("choose one of `--protected-branches`, `--any-branch`, or branch/tag patterns")}
 	}
-	out := plan{protection: desired}
+	out := plan{protection: desired, names: labels}
 	switch {
 	case p.protectedBranches:
 		out.protection.BranchPolicy = &api.DeploymentBranchPolicy{ProtectedBranches: true}
@@ -244,10 +248,24 @@ func syncPatterns(c *api.Client, env string, want []pattern) error {
 	return nil
 }
 
-// apply writes a plan to env and syncs its patterns.
-func apply(c *api.Client, env string, pl plan, current *api.Protection) error {
-	if _, err := c.PutEnvironment(env, pl.protection, current); err != nil {
+// apply writes a plan to env and syncs its patterns. GitHub accepts reviewers
+// without access to the repository and silently drops them, so apply warns
+// about every requested reviewer missing from the response.
+func apply(io *cmdutil.IO, c *api.Client, env string, pl plan, current *api.Protection) error {
+	got, err := c.PutEnvironment(env, pl.protection, current)
+	if err != nil {
 		return err
+	}
+	kept := got.Protection().Reviewers
+	for _, r := range pl.protection.Reviewers {
+		if slices.Contains(kept, r) {
+			continue
+		}
+		name := pl.names[r]
+		if name == "" {
+			name = fmt.Sprintf("%s %d", strings.ToLower(r.Type), r.ID)
+		}
+		fmt.Fprintf(io.ErrOut, "%s GitHub dropped required reviewer %s: reviewers need access to %s as a collaborator or through a team\n", io.WarningIcon(), name, c.FullName())
 	}
 	if pl.patterns != nil {
 		return syncPatterns(c, env, pl.patterns)
@@ -300,7 +318,7 @@ standard input.`,
 			if err != nil {
 				return err
 			}
-			if err := apply(c, name, pl, nil); err != nil {
+			if err := apply(f.IO, c, name, pl, nil); err != nil {
 				return err
 			}
 			if f.IO.StdoutTTY {
@@ -409,7 +427,7 @@ interactive editor seeded with the current settings.`,
 			if err != nil {
 				return err
 			}
-			if err := apply(c, name, pl, &current); err != nil {
+			if err := apply(f.IO, c, name, pl, &current); err != nil {
 				return err
 			}
 			if f.IO.StdoutTTY {

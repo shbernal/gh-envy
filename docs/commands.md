@@ -174,5 +174,6 @@ Fields that need extra API calls (`branchPolicies`, `protectionApps`, `variables
 ## Plans and permissions
 
 - Managing environments needs admin access to the repository. A token with the `repo` scope is enough.
+- Required reviewers need access to the repository, as collaborators or through a team. GitHub accepts anyone else without an error and drops them from the list, so gh envy warns when a reviewer you asked for is missing after the change.
 - Approving and rejecting needs write access to the repository and a place among the environment's required reviewers, directly or through a team. With prevent-self-review on, GitHub refuses a review from the person who triggered the run, even a repository admin with admin bypass on.
 - On private repositories, required reviewers and wait timers need GitHub Pro, Team or Enterprise. Branch policies and admin bypass work on every plan. gh envy only sends the plan-gated fields when they are set or being cleared, so plain environments work on free plans.

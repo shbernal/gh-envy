@@ -490,3 +490,22 @@ func TestWaitTimer(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateWarnsAboutDroppedReviewers(t *testing.T) {
+	g := newFakeGH(t)
+	g.users()
+	g.json("GET "+envBase+"production", 404, `{"message":"Not Found"}`)
+	g.json("PUT "+envBase+"production", 200, envJSON("production", "reviewers"))
+	g.json("GET "+envBase+"staging", 404, `{"message":"Not Found"}`)
+	g.json("PUT "+envBase+"staging", 200, envJSON("staging"))
+
+	r, _ := run(t, g, false, nil, "create", "production", "-r", "octocat", "-r", "acme/ops")
+	if r.code != 0 || r.errOut != "" {
+		t.Errorf("kept reviewers: exit %d err %q", r.code, r.errOut)
+	}
+	r, _ = run(t, g, false, nil, "create", "staging", "-r", "@hubot")
+	if r.code != 0 {
+		t.Fatalf("exit %d: %s", r.code, r.errOut)
+	}
+	assertContains(t, r.errOut, "! GitHub dropped required reviewer hubot: reviewers need access to owner/repo")
+}

@@ -75,7 +75,11 @@ func cloneEnv(f *cmdutil.Factory, src, dst *api.Client, srcName, dstName string,
 		return err
 	}
 
-	pl := plan{protection: env.Protection()}
+	pl := plan{protection: env.Protection(), names: map[api.ReviewerRef]string{}}
+	entries, _ := env.Reviewers()
+	for _, r := range entries {
+		pl.names[api.ReviewerRef{Type: r.Type, ID: r.Reviewer.ID}] = r.Name()
+	}
 	if env.BranchPolicyMode() == "custom" {
 		_, pats, err := listPatterns(src, srcName)
 		if err != nil {
@@ -83,7 +87,7 @@ func cloneEnv(f *cmdutil.Factory, src, dst *api.Client, srcName, dstName string,
 		}
 		pl.patterns = append([]pattern{}, pats...)
 	}
-	if err := apply(dst, dstName, pl, current); err != nil {
+	if err := apply(f.IO, dst, dstName, pl, current); err != nil {
 		return err
 	}
 
