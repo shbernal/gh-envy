@@ -341,7 +341,13 @@ func (c *Client) ReviewDeployments(runID int64, envIDs []int64, state, comment s
 	err := c.doRaw(http.MethodPost, c.repoPath("actions/runs/%d/pending_deployments", runID), body, nil)
 	var httpErr *ghapi.HTTPError
 	if errors.As(err, &httpErr) && (httpErr.StatusCode == http.StatusForbidden || httpErr.StatusCode == http.StatusUnprocessableEntity) {
-		return fmt.Errorf("%s\nReviewing a deployment needs write access to the repository and a place among the environment's required reviewers", httpErr.Message)
+		// GitHub answers a reviewer it does not accept with 422 and a string
+		// "errors" field that go-gh cannot decode, leaving Message empty.
+		msg := httpErr.Message
+		if msg == "" {
+			msg = "No pending deployment requests to approve or reject"
+		}
+		return fmt.Errorf("%s\nReviewing a deployment needs write access to the repository and a place among the environment's required reviewers", msg)
 	}
 	return translate(err)
 }

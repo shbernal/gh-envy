@@ -198,9 +198,11 @@ func TestApproveReviewError(t *testing.T) {
 	g := newFakeGH(t)
 	g.json("GET "+runsBase+"/101", 200, runJSON(101, "Deploy", "main"))
 	g.json("GET "+pendingPath, 200, "["+pendingJSON(1, "staging", "approver")+"]")
-	g.json("POST "+pendingPath, 422, `{"message":"Unprocessable"}`)
+	g.json("POST "+pendingPath, 422, `{"message":"Validation Failed","errors":"No pending deployment requests to approve or reject","status":"422"}`)
 	r, _ := run(t, g, false, nil, "approve", "101")
-	assertContains(t, r.errOut, "Unprocessable", "required reviewers")
+	if r.code != 1 || !strings.HasPrefix(r.errOut, "No pending deployment requests to approve or reject\nReviewing a deployment needs write access") {
+		t.Errorf("exit %d err %q", r.code, r.errOut)
+	}
 }
 
 func TestApproveWatch(t *testing.T) {
