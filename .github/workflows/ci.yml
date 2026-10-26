@@ -19,4 +19,15 @@ jobs:
       - run: go test -race ./...
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.14
+          version: v2.15
+
+  commit-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: commit-check/commit-check-action@v2
+        with:
+          message: true
+          branch: false

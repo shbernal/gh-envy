@@ -15,8 +15,6 @@
   - Built on `github.com/cli/go-gh/v2` and cobra, the same stack as `gh`.
 
 - Iron Laws
-  - Tokens are expensive, state of the art models need minimal guidance, don't repeat yourself, don't babysit, don't be over-specific.
-  - AI-native project. All code is AI-generated.
-  - Minimal attention when model implements without errors, we document in more detail when model struggles.
-  - Do not expect the user to have read each line, don't lose him on the internals, give visibility on a higher-architectural level.
+  - State of the art AI models/harnesses need minimal guidance. Don't repeat yourself, don't babysit, don't be over-specific.
+  - Only document items here when model diverges repeatedly from expected behavior. Don't document behaviors implemented without errors.
   - No journaling: code comments / documentation describe current state, they don't carry a log of their own edit history.
