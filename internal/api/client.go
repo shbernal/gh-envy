@@ -56,6 +56,13 @@ func (c *Client) envPath(env string, suffix string) string {
 }
 
 func (c *Client) do(method, path string, body any, out any) error {
+	// url.PathEscape leaves "." and ".." intact; a server or proxy that
+	// normalizes them would retarget the request, e.g. DELETE on the repository.
+	for _, seg := range strings.Split(strings.SplitN(path, "?", 2)[0], "/") {
+		if seg == "." || seg == ".." {
+			return fmt.Errorf("invalid name %q", seg)
+		}
+	}
 	var reader *bytes.Reader
 	switch b := body.(type) {
 	case nil:

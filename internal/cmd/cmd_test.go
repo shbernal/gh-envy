@@ -125,6 +125,20 @@ func TestEnvironmentNamesAreEscaped(t *testing.T) {
 	g.one("GET", envBase+"feature%2Fone")
 }
 
+func TestDotSegmentNamesAreRejected(t *testing.T) {
+	g := newFakeGH(t)
+	for _, name := range []string{".", ".."} {
+		r, _ := run(t, g, false, nil, "delete", name, "--yes")
+		if r.code != 1 {
+			t.Errorf("delete %q: exit %d", name, r.code)
+		}
+		assertContains(t, r.errOut, `invalid name "`+name+`"`)
+	}
+	if len(g.calls) != 0 {
+		t.Fatalf("sent requests: %v", g.calls)
+	}
+}
+
 func TestCreatePlain(t *testing.T) {
 	g := newFakeGH(t)
 	g.json("GET "+envBase+"staging", 404, `{"message":"Not Found"}`)
