@@ -4,17 +4,17 @@ Issues and pull requests are welcome, including ones written entirely by an AI a
 
 ## AI disclosure
 
-If an AI tool wrote or substantially shaped your issue or pull request, say which harness and model, for example "Claude Code, Claude Opus 5.5". It helps reviewers know what to double-check.
+If an AI tool wrote or substantially shaped your issue or pull request, say which harness and model, for example "Claude Code, Claude Opus 5.5", on the `AI disclosure:` line of the pull request template. It helps reviewers know what to double-check.
+
+Commit messages carry no AI attribution (no `Co-authored-by:` trailer for a tool, no "Generated with" line). CI rejects them.
 
 ## Setup
 
-The Go version is pinned in `go.mod`. Hooks run through [lefthook](https://lefthook.dev):
-
-```sh
-lefthook install
-```
+The Go version is pinned in `go.mod`. There are no git hooks: every check runs in CI.
 
 ## Checks
+
+CI runs these on every pull request:
 
 ```sh
 go test ./...
