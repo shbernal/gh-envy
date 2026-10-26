@@ -200,6 +200,12 @@ func (g *fakeGH) emptyDetails(name string) {
 	g.json("GET "+envBase+name+"/secrets", 200, `{"total_count":0,"secrets":[]}`)
 }
 
+// noDeployments serves a repository with no deployments and no waiting runs.
+func (g *fakeGH) noDeployments() {
+	g.json("GET /repos/owner/repo/deployments", 200, `[]`)
+	g.json("GET /repos/owner/repo/actions/runs", 200, runsJSON())
+}
+
 func (g *fakeGH) users() {
 	g.json("GET /users/octocat", 200, `{"id":10,"login":"octocat"}`)
 	g.json("GET /users/hubot", 200, `{"id":11,"login":"hubot"}`)
@@ -238,4 +244,9 @@ func pendingJSON(envID int64, env string, opts ...string) string {
 	}
 	return fmt.Sprintf(`{"environment":{"id":%d,"name":%q,"html_url":"https://github.com/owner/repo/deployments"},"wait_timer":%s,"wait_timer_started_at":%s,"current_user_can_approve":%t,"reviewers":%s}`,
 		envID, env, wait, started, canApprove, reviewers)
+}
+
+// deploymentJSON renders one deployment payload.
+func deploymentJSON(id int64, ref, sha string) string {
+	return fmt.Sprintf(`{"id":%d,"sha":%q,"ref":%q,"environment":"production","creator":{"login":"hubot"},"created_at":"2026-10-09T12:00:00Z"}`, id, sha, ref)
 }
