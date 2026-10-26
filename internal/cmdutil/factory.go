@@ -1,10 +1,12 @@
 package cmdutil
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"os"
 
+	"github.com/cli/go-gh/v2"
 	ghapi "github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/browser"
 	"github.com/cli/go-gh/v2/pkg/prompter"
@@ -16,6 +18,7 @@ import (
 // Prompter is the subset of go-gh's prompter the commands use.
 type Prompter interface {
 	Select(prompt, defaultValue string, options []string) (int, error)
+	MultiSelect(prompt string, defaultValues, options []string) ([]int, error)
 	Input(prompt, defaultValue string) (string, error)
 	Password(prompt string) (string, error)
 	Confirm(prompt string, defaultValue bool) (bool, error)
@@ -33,6 +36,8 @@ type Factory struct {
 	Transport http.RoundTripper
 	Prompter  Prompter
 	Browser   Browser
+	// Exec runs a gh command attached to the terminal.
+	Exec func(args ...string) error
 	// Repo overrides repository resolution, for tests.
 	Repo *repository.Repository
 }
@@ -44,6 +49,9 @@ func NewFactory() *Factory {
 		IO:       io,
 		Prompter: prompter.New(os.Stdin, os.Stdout, os.Stderr),
 		Browser:  browser.New("", io.Out, io.ErrOut),
+		Exec: func(args ...string) error {
+			return gh.ExecInteractive(context.Background(), args...)
+		},
 	}
 }
 

@@ -147,7 +147,14 @@ func (p *surveyPrompter) Password(prompt string) (string, error) {
 }
 
 func (p *surveyPrompter) Select(string, string, []string) (int, error) { return 0, nil }
-func (p *surveyPrompter) Confirm(string, bool) (bool, error)           { return true, nil }
+func (p *surveyPrompter) MultiSelect(_ string, _, options []string) ([]int, error) {
+	all := make([]int, len(options))
+	for i := range all {
+		all[i] = i
+	}
+	return all, nil
+}
+func (p *surveyPrompter) Confirm(string, bool) (bool, error) { return true, nil }
 
 func record(sc scene) ([]line, float64) {
 	now := time.Now()

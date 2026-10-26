@@ -28,6 +28,13 @@ type fakeGH struct {
 	t     *testing.T
 	mux   *http.ServeMux
 	calls []call
+	// execs records the gh commands a run handed off to.
+	execs [][]string
+}
+
+func (g *fakeGH) exec(args ...string) error {
+	g.execs = append(g.execs, args)
+	return nil
 }
 
 func newFakeGH(t *testing.T) *fakeGH {
@@ -112,6 +119,10 @@ func (p *stubPrompter) Select(prompt, _ string, _ []string) (int, error) {
 	return p.next(prompt).(int), nil
 }
 
+func (p *stubPrompter) MultiSelect(prompt string, _, _ []string) ([]int, error) {
+	return p.next(prompt).([]int), nil
+}
+
 func (p *stubPrompter) Input(prompt, _ string) (string, error) {
 	return p.next(prompt).(string), nil
 }
@@ -146,7 +157,7 @@ func run(t *testing.T, g *fakeGH, tty bool, prompter *stubPrompter, args ...stri
 	if prompter == nil {
 		prompter = &stubPrompter{t: t}
 	}
-	f := &cmdutil.Factory{IO: io, Transport: g, Prompter: prompter, Browser: b, Repo: &repo}
+	f := &cmdutil.Factory{IO: io, Transport: g, Prompter: prompter, Browser: b, Repo: &repo, Exec: g.exec}
 	code := Execute(f, args)
 	return result{code, out.String(), errOut.String()}, b
 }

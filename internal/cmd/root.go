@@ -58,6 +58,8 @@ Environment secrets and variables are managed by core gh:
 		newCloneCmd(f),
 		newProtectionCmd(f),
 		newWaitingCmd(f),
+		newReviewCmd(f, "approved"),
+		newReviewCmd(f, "rejected"),
 	)
 	return root
 }
