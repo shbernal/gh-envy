@@ -118,11 +118,12 @@ type PendingDeployment struct {
 
 // Deployment is a deployment to an environment with the state of its latest status.
 type Deployment struct {
-	ID        int64     `json:"id"`
-	SHA       string    `json:"sha"`
-	Ref       string    `json:"ref"`
-	Creator   Actor     `json:"creator"`
-	CreatedAt time.Time `json:"created_at"`
+	ID          int64     `json:"id"`
+	Environment string    `json:"environment"`
+	SHA         string    `json:"sha"`
+	Ref         string    `json:"ref"`
+	Creator     Actor     `json:"creator"`
+	CreatedAt   time.Time `json:"created_at"`
 	// State and URL come from the latest deployment status; State is empty
 	// when the deployment has no status yet.
 	State string `json:"-"`
