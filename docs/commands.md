@@ -96,6 +96,16 @@ gh envy protection disable <environment> <app-slug>
 
 Manages custom deployment protection rules, which gate deployments on a GitHub App. An app must be installed on the repository before it shows in `--available` and can be enabled.
 
+## deployments
+
+```
+gh envy deployments [<environment>] [-L N] [--json FIELDS [--jq EXPR | --template TMPL]]
+```
+
+Lists deployments, newest first, with the state of each one's latest status. `<environment>` shows only the deployments to that environment. `--limit` defaults to 30.
+
+Each deployment costs one more API request to read its state. `--json` skips those requests when it selects neither `state` nor `url`. Piped output is tab-separated with no header: environment, full SHA, ref, creator, state, created time in RFC 3339, deployment ID.
+
 ## waiting
 
 ```
@@ -170,6 +180,17 @@ Fields that need extra API calls (`branchPolicies`, `protectionApps`, `variables
 | `canApprove` | whether you can review this gate |
 | `reviewers` | `[{type, name, id}]`, as in `view` |
 | `waitTimer`, `waitTimerStartedAt` | minutes, and when the timer started or `null` |
+
+`deployments` accepts:
+
+| Field | Type |
+| --- | --- |
+| `id` | deployment ID |
+| `environment` | the environment deployed to |
+| `sha`, `ref` | the commit and the ref it was deployed from |
+| `creator` | login of the user or app that created the deployment |
+| `createdAt` | timestamp |
+| `state`, `url` | as in `lastDeployment` above, empty when the deployment has no status |
 
 ## Plans and permissions
 

@@ -363,22 +363,60 @@ func (c *Client) CurrentUser() (string, error) {
 
 // LastDeployment returns the latest deployment to env, nil when there is none.
 func (c *Client) LastDeployment(env string) (*Deployment, error) {
-	var deployments []Deployment
-	q := url.Values{"environment": {env}, "per_page": {"1"}}
-	if err := c.do(http.MethodGet, c.repoPath("deployments?%s", q.Encode()), nil, &deployments); err != nil {
+	deployments, err := c.ListDeployments(env, 1, true)
+	if err != nil || len(deployments) == 0 {
 		return nil, err
 	}
-	if len(deployments) == 0 {
-		return nil, nil
+	return &deployments[0], nil
+}
+
+// ListDeployments returns up to limit deployments to env, newest first, all
+// when limit is 0. An empty env lists every environment. withState reads the
+// latest status of each deployment, one request per deployment.
+func (c *Client) ListDeployments(env string, limit int, withState bool) ([]Deployment, error) {
+	size := perPage
+	if limit > 0 && limit < perPage {
+		size = limit
 	}
-	d := &deployments[0]
+	q := url.Values{"per_page": {strconv.Itoa(size)}}
+	if env != "" {
+		q.Set("environment", env)
+	}
+	var all []Deployment
+	for page := 1; ; page++ {
+		q.Set("page", strconv.Itoa(page))
+		var items []Deployment
+		if err := c.do(http.MethodGet, c.repoPath("deployments?%s", q.Encode()), nil, &items); err != nil {
+			return nil, err
+		}
+		all = append(all, items...)
+		if limit > 0 && len(all) >= limit {
+			all = all[:limit]
+			break
+		}
+		if len(items) < size {
+			break
+		}
+	}
+	if withState {
+		for i := range all {
+			if err := c.latestStatus(&all[i]); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return all, nil
+}
+
+// latestStatus fills in d's State and URL from its latest deployment status.
+func (c *Client) latestStatus(d *Deployment) error {
 	var statuses []struct {
 		State          string `json:"state"`
 		EnvironmentURL string `json:"environment_url"`
 		LogURL         string `json:"log_url"`
 	}
 	if err := c.do(http.MethodGet, c.repoPath("deployments/%d/statuses?per_page=1", d.ID), nil, &statuses); err != nil {
-		return nil, err
+		return err
 	}
 	if len(statuses) > 0 {
 		d.State = statuses[0].State
@@ -387,7 +425,7 @@ func (c *Client) LastDeployment(env string) (*Deployment, error) {
 			d.URL = statuses[0].LogURL
 		}
 	}
-	return d, nil
+	return nil
 }
 
 // ResolveReviewer turns "login" or "org/team-slug" into a reviewer reference.

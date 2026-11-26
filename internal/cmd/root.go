@@ -30,8 +30,9 @@ func NewRoot(f *cmdutil.Factory) *cobra.Command {
 		Use:   "envy <command>",
 		Short: "Manage GitHub deployment environments",
 		Long: `Manage the deployment environments of a repository: list, view, create,
-edit, delete and clone them, with their protection rules, and approve or
-reject the workflow runs waiting at their gates.
+edit, delete and clone them, with their protection rules, list their
+deployment history, and approve or reject the workflow runs waiting at their
+gates.
 
 Environment secrets and variables are managed by core gh:
   gh secret set NAME --env ENV
@@ -59,6 +60,7 @@ Environment secrets and variables are managed by core gh:
 		newDeleteCmd(f),
 		newCloneCmd(f),
 		newProtectionCmd(f),
+		newDeploymentsCmd(f),
 		newWaitingCmd(f),
 		newReviewCmd(f, "approved"),
 		newReviewCmd(f, "rejected"),

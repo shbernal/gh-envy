@@ -122,6 +122,7 @@ The command is `gh envy`. Its name stays clear of `gh env`, so it keeps working 
 | `gh envy clone <src> <dst>` | Copy rules, patterns, apps and variables; prints the secrets left to set |
 | `gh envy delete <env>...` | Delete, after typing the name or with `--yes` |
 | `gh envy protection list\|enable\|disable` | Custom deployment protection apps |
+| `gh envy deployments [<env>]` | Deployment history, with the state of each deployment |
 | `gh envy waiting [<env>]` | Runs held at an environment gate, and what holds them |
 | `gh envy approve [<run>]` | Approve a waiting deployment; `--watch` follows the run |
 | `gh envy reject [<run>]` | Reject a waiting deployment |
